@@ -10,7 +10,6 @@ use std::cmp::{Ord, Eq};
 use std::num::{NumCast, Zero};
 use std::mem;
 use std::u16;
-use std::slice;
 use std::iter;
 use geom::point::Point2D;
 
@@ -565,13 +564,13 @@ impl<'a> GlyphStore {
         let entry = match first_glyph_data.is_missing {
             true  => GlyphEntry::missing(glyph_count),
             false => {
-                let glyphs_vec = slice::from_fn(glyph_count as uint, |i| {
+                let glyphs_vec = Vec::from_fn(glyph_count as uint, |i| {
                     DetailedGlyph::new(data_for_glyphs[i].index,
                                        data_for_glyphs[i].advance,
                                        data_for_glyphs[i].offset)
                 });
 
-                self.detail_store.add_detailed_glyphs_for_entry(i, glyphs_vec);
+                self.detail_store.add_detailed_glyphs_for_entry(i, glyphs_vec.as_slice());
                 GlyphEntry::complex(first_glyph_data.cluster_start,
                                     first_glyph_data.ligature_start,
                                     glyph_count)
