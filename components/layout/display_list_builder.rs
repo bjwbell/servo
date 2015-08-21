@@ -24,7 +24,6 @@ use table_cell::CollapsedBordersForCell;
 use canvas_traits::{CanvasMsg, FromLayoutMsg};
 use euclid::{Point2D, Point3D, Rect, Size2D, SideOffsets2D};
 use euclid::Matrix4;
-use euclid::num::Zero;
 use gfx_traits::color;
 use gfx::display_list::{BLUR_INFLATION_FACTOR, BaseDisplayItem, BorderDisplayItem};
 use gfx::display_list::{BorderRadii, BoxShadowClipMode, BoxShadowDisplayItem, ClippingRegion};

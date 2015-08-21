@@ -681,6 +681,7 @@ impl<'a> PaintContext<'a> {
     /// slice through the rounded corners. My first attempt to unify with the above code resulted
     /// in making a mess of it, and the simplicity of this code path is appealing, so it may not
     /// be worth it… In any case, revisit this decision when we support elliptical radii.
+    #[allow(non_snake_case)]
     fn create_rounded_rect_path(&self,
                                 path_builder: &mut PathBuilder,
                                 bounds: &Rect<f32>,
@@ -693,7 +694,6 @@ impl<'a> PaintContext<'a> {
         let rad_L  = rad_BL + f32::consts::FRAC_PI_4;
         let rad_TL = rad_L  + f32::consts::FRAC_PI_4;
         let rad_T  = rad_TL + f32::consts::FRAC_PI_4;
-        let rad_TR = rad_T  + f32::consts::FRAC_PI_4;
 
         let border = SideOffsets2D::new(radii.top_left.height.max(radii.top_right.height),
                                         radii.bottom_right.width.max(radii.top_right.width),
