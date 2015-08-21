@@ -16,6 +16,7 @@
 
 #![deny(unsafe_code)]
 
+use std::ops::Mul;
 use display_list::optimizer::DisplayListOptimizer;
 use paint_context::{PaintContext, ToAzureRect};
 use self::DisplayItem::*;
@@ -955,13 +956,56 @@ pub struct BorderDisplayItem {
 /// Information about the border radii.
 ///
 /// TODO(pcwalton): Elliptical radii.
-#[derive(Clone, Default, PartialEq, Debug, Copy, HeapSizeOf, Deserialize, Serialize)]
+#[derive(Clone, PartialEq, Debug, Copy, HeapSizeOf, Deserialize, Serialize)]
 pub struct BorderRadii<T> {
-    pub top_left: T,
-    pub top_right: T,
-    pub bottom_right: T,
-    pub bottom_left: T,
+    pub top_left: Size2D<T>,
+    pub top_right: Size2D<T>,
+    pub bottom_right: Size2D<T>,
+    pub bottom_left: Size2D<T>,
 }
+
+impl<T> Default for BorderRadii<T> where T: Default, T: Clone {
+    fn default() -> Self {
+        let top_left = Size2D::new(Default::default(),
+                                   Default::default());
+        let top_right = Size2D::new(Default::default(),
+                                    Default::default());
+        let bottom_left = Size2D::new(Default::default(),
+                                      Default::default());
+        let bottom_right = Size2D::new(Default::default(),
+                                       Default::default());
+        BorderRadii { top_left: top_left, top_right: top_right, bottom_left: bottom_left, bottom_right: bottom_right }
+    }
+}
+
+impl BorderRadii<Au> {
+    pub fn scale_by(&self, s: f32) -> BorderRadii<Au> {
+        BorderRadii { top_left: BorderRadii::scale_corner_by(self.top_left, s), top_right: BorderRadii::scale_corner_by(self.top_right, s), bottom_left: BorderRadii::scale_corner_by(self.bottom_left, s), bottom_right: BorderRadii::scale_corner_by(self.bottom_right, s) }
+    }
+
+    pub fn scale_corner_by(corner: Size2D<Au>, s: f32) -> Size2D<Au> {
+        Size2D { width: corner.width.scale_by(s), height: corner.height.scale_by(s) }
+    }
+}
+
+
+/*#[derive(Clone, Default, PartialEq, Debug, Copy, HeapSizeOf, Deserialize, Serialize)]
+pub struct BorderEllipse<T> {
+    pub horizontal: T,
+    pub vertical: T,
+}
+
+impl<T> Zero for BorderEllipse<T> where T: Zero {
+    fn zero() -> BorderEllipse<T> {
+        BorderEllipse { horizontal: Zero::zero(), vertical: Zero::zero() }
+    }
+}
+
+impl BorderEllipse<Au> {
+    pub fn scale_by(&self, s: f32) -> BorderEllipse<Au> {
+        BorderEllipse { horizontal: self.horizontal.scale_by(s), vertical: self.vertical.scale_by(s) }
+    }
+}*/
 
 impl<T> BorderRadii<T> where T: PartialEq + Zero {
     /// Returns true if all the radii are zero.
@@ -976,10 +1020,10 @@ impl<T> BorderRadii<T> where T: PartialEq + Zero + Clone {
     /// Returns a set of border radii that all have the given value.
     pub fn all_same(value: T) -> BorderRadii<T> {
         BorderRadii {
-            top_left: value.clone(),
-            top_right: value.clone(),
-            bottom_right: value.clone(),
-            bottom_left: value.clone(),
+            top_left: Size2D { width: value.clone(), height: value.clone()},
+            top_right: Size2D { width: value.clone(), height: value.clone()},
+            bottom_right: Size2D { width: value.clone(), height: value.clone()},
+            bottom_left: Size2D { width: value.clone(), height: value.clone()},
         }
     }
 }
