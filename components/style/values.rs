@@ -549,9 +549,7 @@ pub mod specified {
         }
 
         pub fn parse_one_radii(input: &mut Parser) -> Result<BorderRadiusSize, ()> {
-            println!("BorderRadiusSize::parse_one_radii");
             if let Ok(first) = LengthOrPercentage::parse_non_negative(input) {
-                println!("radius value: {:?} ", first);
                 Ok(BorderRadiusSize(Size2D::new(first, first)))
             } else {
                 println!("Err!!");
@@ -562,7 +560,6 @@ pub mod specified {
         #[allow(dead_code)]
         #[inline]
         pub fn parse(input: &mut Parser) -> Result<BorderRadiusSize, ()> {
-            println!("BorderRadiusSize::parse");
             let first = try!(LengthOrPercentage::parse_non_negative(input));
             let second = input.try(LengthOrPercentage::parse_non_negative).unwrap_or(first);
             Ok(BorderRadiusSize(Size2D::new(first, second)))

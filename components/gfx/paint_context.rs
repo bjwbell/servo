@@ -114,6 +114,20 @@ struct BorderCorners {
     BR: BorderCorner,
 }
 
+
+#[derive(Copy, Clone, Debug)]
+struct Ellipse {
+    origin: Point2D<f32>,
+    width: f32,
+    height: f32,
+}
+
+#[derive(Copy, Clone, Debug)]
+struct Line {
+    start: Point2D<f32>,
+    end: Point2D<f32>,
+}
+
 impl<'a> PaintContext<'a> {
 
     pub fn is_zero_ellipse(radius: &Size2D<AzFloat>) -> bool {
@@ -393,6 +407,106 @@ impl<'a> PaintContext<'a> {
         self.draw_target.push_clip(&path_builder.finish());
     }
 
+
+
+// This code is editable and runnable!
+fn solve_quadratic(a: f32, b: f32, c: f32) -> (Option<f32>, Option<f32>) {
+    let descriminant = b * b - 4. * a * c;
+    if descriminant < 0. {
+        return (None, None)
+    }
+    let x1 = (-b + descriminant.sqrt())/(2. * a);
+    let x2 = (-b - descriminant.sqrt())/(2. * a);
+    (Some(x1), Some(x2))
+}
+    fn point_in_line(l: Line, p: Point2D<f32>) -> bool {
+        p.x >= l.start.x && p.x <= l.end.x
+    }
+fn intersect_ellipse_line(e: Ellipse, line: Line) -> (Option<Point2D<f32>>, Option<Point2D<f32>>)  {
+    // equation of a line
+    // y = a * x + b
+    if line.end.x - line.start.x <= f32::EPSILON {
+        println!("error");
+        return (None, None);
+    }
+    // shift the origin to center of the ellipse.
+    let l = Line { start: Point2D { x: line.start.x - e.origin.x,
+                                    y: line.start.y - e.origin.y},
+                   end: Point2D { x: line.end.x - e.origin.x,
+                                  y: line.end.y - e.origin.y}};
+
+    let a = (l.end.y - l.start.y)/(l.end.x - l.start.x);
+    let b = l.start.y - (a * l.start.x);
+    // equation of an ellipse
+    // x^2/w^2 + y^2/h^2 = 1
+
+    // substitute y = a * x + b, giving
+    // x^2/w^2 + (a^2x^2 + 2abx + b^2)/h^2 = 1
+    // simplify to
+    // (h^2 + w^2a^2)x^2 + 2abw^2x + (b^2w^2 - w^2h^2) = 0
+
+    let w = e.width;
+    let h = e.height;
+    let quad_a = h * h + w * w * a * a;
+    let quad_b = 2. * a * b * w * w;
+    let quad_c = b * b * w * w - w * w * h * h;
+    let intersections = PaintContext::solve_quadratic(quad_a, quad_b, quad_c);
+    match intersections {
+        (Some(x0), Some(x1)) => {
+            let mut p0 = Point2D{x: x0 + e.origin.x, y: a * x0 + b + e.origin.y};
+            let mut p1 = Point2D{x: x1 + e.origin.x, y: a * x1 + b + e.origin.y};
+            if x0 > x1 {
+                let tmp = p0;
+                p0 = p1;
+                p1 = tmp;
+            }
+            println!("1 - (p0, p1): ({:?}, {:?})", p0, p1);
+            match (PaintContext::point_in_line(line, p0), PaintContext::point_in_line(line, p1)) {
+                (true, true) => (Some(p0), Some(p1)),
+                (true, false) => (Some(p0), None),
+                (false, true) => (Some(p1), None),
+                (false, false) => (None, None)
+            }
+        },
+        (Some(x0), None) => {
+            let p = Point2D{x: x0 + e.origin.x, y: a * x0 + b + e.origin.y};
+            println!("2 - p0: {:?}", p);
+            if PaintContext::point_in_line(line, p) {
+                (Some(p), None)
+            } else {
+                (None, None)
+            }
+        },
+
+        (None, Some(x1)) => {
+            let p = Point2D{x: x1 + e.origin.x, y: a * x1 + b + e.origin.y};
+            println!("3 - p0: {:?}", p);
+            if PaintContext::point_in_line(line, p) {
+                (Some(p), None)
+            } else {
+                (None, None)
+            }
+        },
+        (None, None) => {println!("4 - no intersect!!"); (None, None)},
+    }
+}
+
+    fn ellipse_line_intersection_angle(e: Ellipse, l: Line) -> f32 {
+        let intersection = PaintContext::intersect_ellipse_line(e, l);
+        let intersect_point = match intersection {
+            (Some(p0), Some(_)) => p0,
+            (Some(p0), None) => p0,
+            (None, Some(p1)) => p1,
+            (None, None) => {
+                println!("ellipse_line_intersection_angle: no intersection!!");
+                Point2D{ x: 0., y: 0. }
+            },
+        };
+        println!("ellipse_line_intersection_angle: intersect_point {:?}", intersect_point);
+        return (-1. * (intersect_point.y - e.origin.y)/e.height).asin();
+        //return ((intersect_point.y - e.origin.y)/(intersect_point.x - e.origin.x)).atan();
+    }
+
         fn ellipse_to_bezier(path_builder: &mut PathBuilder, origin: Point2D<AzFloat> , radius: Size2D<AzFloat>, start_angle: f32, end_angle: f32) {
 
             if PaintContext::is_zero_ellipse(&radius) {
@@ -425,8 +539,8 @@ impl<'a> PaintContext<'a> {
             let cp2 = Point2D::new(end_point.x + rev_tangent_end.x * kappa_x,
                                    end_point.y + rev_tangent_end.y * kappa_y);
             
-            println!("start (angle, start_angle.cos(), start_angle.sin()): ({}, {}, {}), end (...) : ({}, {}, {})", start_angle, start_angle.cos(), start_angle.sin(), end_angle, end_angle.cos(), end_angle.sin());
-            println!("start_point: {:?}, cp1: {:?}, cp2: {:?}, end_point: {:?}", start_point, cp1, cp2, end_point);
+            //println!("start (angle, start_angle.cos(), start_angle.sin()): ({}, {}, {}), end (...) : ({}, {}, {})", start_angle, start_angle.cos(), start_angle.sin(), end_angle, end_angle.cos(), end_angle.sin());
+            //println!("start_point: {:?}, cp1: {:?}, cp2: {:?}, end_point: {:?}", start_point, cp1, cp2, end_point);
             path_builder.bezier_curve_to(&cp1, &cp2, &end_point);
         }
 
@@ -606,12 +720,29 @@ impl<'a> PaintContext<'a> {
                 path_builder.move_to(corner_TL);
                 path_builder.line_to(corner_TR);
 
-                PaintContext::draw_corner_path(path_builder, &corner.TR.origin, &radius.top_right, &corner.TR.dist_elbow, true, rad_T, rad_TR);
+                PaintContext::draw_corner_path(path_builder,
+                                               &corner.TR.origin,
+                                               &radius.top_right,
+                                               &corner.TR.dist_elbow,
+                                               true,
+                                               rad_T,
+                                               rad_TR);
 
                 path_builder.line_to(edge_BR);
                 path_builder.line_to(edge_BL);
-                
-                PaintContext::draw_corner_path(path_builder, &corner.TL.origin, &radius.top_left, &corner.TL.dist_elbow, false, rad_TL, rad_T);
+                let l = Line{start: box_TL, end: edge_BL };
+                let e = Ellipse{origin: corner.TL.origin, width: radius.top_left.width, height: radius.top_left.height};
+                let angle = PaintContext::ellipse_line_intersection_angle(e, l);
+                println!("line top: {:?}", l);
+                println!("ellipse top: {:?}", e);
+                println!("angle top: {:?}", angle);
+                PaintContext::draw_corner_path(path_builder,
+                                               &corner.TL.origin,
+                                               &radius.top_left,
+                                               &corner.TL.dist_elbow,
+                                               false,
+                                               rad_L + angle,
+                                               rad_T);
             }
             Direction::Left => {
                 let edge_TL = box_TL + dy(radius.top_left.height.max(border.top)); 
@@ -625,7 +756,18 @@ impl<'a> PaintContext<'a> {
                 path_builder.move_to(corner_BL);
                 path_builder.line_to(corner_TL);
 
-                PaintContext::draw_corner_path(path_builder, &corner.TL.origin, &radius.top_left, &corner.TL.dist_elbow, true, rad_L, rad_TL);
+                let l = Line{start: box_TL, end: edge_TR };
+                let e = Ellipse{origin: corner.TL.origin, width: radius.top_left.width, height: radius.top_left.height};
+                let angle = PaintContext::ellipse_line_intersection_angle(e, l);
+                println!("line left: {:?}", l);
+                println!("ellipse left: {:?}", e);
+                println!("angle left: {:?}", angle);
+                PaintContext::draw_corner_path(path_builder,
+                                               &corner.TL.origin,
+                                               &radius.top_left,
+                                               &corner.TL.dist_elbow,
+                                               true,
+                                               rad_L, rad_L + angle);
 
                 path_builder.line_to(edge_TR);
                 path_builder.line_to(edge_BR);
@@ -635,8 +777,8 @@ impl<'a> PaintContext<'a> {
             Direction::Right => {
                 let edge_TR = box_TR + dy(radius.top_right.height.max(border.top));
                 let edge_BR = box_BR + dy(-radius.bottom_right.height.max(border.bottom));
-                let edge_TL = edge_TR + dx(-border.right) + dy(corner.TR.y_dir * corner.TR.dist_elbow.height);
-                let edge_BL = edge_BR + dx(-border.right) + dy(corner.BR.y_dir * corner.BR.dist_elbow.height);
+                let edge_TL = box_TR + dx(-border.right) + dy(border.top + corner.TR.y_dir * corner.TR.dist_elbow.height);
+                let edge_BL = box_BR + dx(-border.right) + dy(-border.bottom + corner.BR.y_dir * corner.BR.dist_elbow.height);
 
                 let corner_TR = edge_TR + dy_if(PaintContext::is_zero_ellipse(&radius.top_right), -border.top);
                 let corner_BR = edge_BR + dy_if(PaintContext::is_zero_ellipse(&radius.bottom_right), border.bottom);
