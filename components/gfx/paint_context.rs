@@ -409,7 +409,6 @@ impl<'a> PaintContext<'a> {
 
 
 
-// This code is editable and runnable!
 fn solve_quadratic(a: f32, b: f32, c: f32) -> (Option<f32>, Option<f32>) {
     let descriminant = b * b - 4. * a * c;
     if descriminant < 0. {
@@ -711,7 +710,7 @@ fn intersect_ellipse_line(e: Ellipse, line: Line) -> (Option<Point2D<f32>>, Opti
             Direction::Top => {
                 let edge_TL = box_TL + dx(radius.top_left.width.max(border.left));
                 let edge_TR = box_TR + dx(-radius.top_right.width.max(border.right));
-                let edge_BR = box_TR + dx(-border.left + corner.TR.x_dir * corner.TR.dist_elbow.width) + dy(border.top);
+                let edge_BR = box_TR + dx(-border.right + corner.TR.x_dir * corner.TR.dist_elbow.width) + dy(border.top);
                 let edge_BL = box_TL + dx(border.left + corner.TL.x_dir * corner.TL.dist_elbow.width) + dy(border.top);
 
                 let corner_TL = edge_TL + dx_if(PaintContext::is_zero_ellipse(&radius.top_left), -border.left);
