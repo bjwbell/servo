@@ -45,6 +45,10 @@ default = ["glutin_app", "window"]
 window = ["glutin_app/window"]
 headless = ["glutin_app/headless"]
 
+
+[dependencies.simd]
+git = "https://github.com/huonw/simd"
+
 # Uncomment to profile on Linux:
 #
 # [profile.release]

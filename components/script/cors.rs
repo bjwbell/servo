@@ -191,7 +191,7 @@ impl CORSRequest {
             header_names.push(header.name().to_owned());
         }
         header_names.sort();
-        preflight.headers.set(AccessControlRequestHeaders(header_names.into_iter().map(UniCase).collect()));
+        //preflight.headers.set(AccessControlRequestHeaders(header_names.into_iter().map(UniCase).collect()));
 
         // Step 8 unnecessary, we don't use the request body
         // Step 9, 10 unnecessary, we're writing our own fetch code

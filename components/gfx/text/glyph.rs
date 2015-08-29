@@ -1,3 +1,4 @@
+
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
@@ -5,11 +6,14 @@
 use euclid::point::Point2D;
 use std::cmp::{Ordering, PartialOrd};
 use std::mem;
+use std::ops::{BitAnd, Shr};
 use std::u16;
 use std::vec::Vec;
 use util::geometry::Au;
 use util::range::{self, Range, RangeIndex, EachIndex};
 use util::vec::*;
+use simd::u32x4;
+
 
 /// GlyphEntry is a port of Gecko's CompressedGlyph scheme for storing glyph data compactly.
 ///
@@ -511,6 +515,8 @@ pub struct GlyphStore {
     /// `entry_buffer` point to locations in this data structure.
     detail_store: DetailedGlyphStore,
 
+    has_detailed_glyphs: bool,
+    
     is_whitespace: bool,
     is_rtl: bool,
 }
@@ -533,6 +539,7 @@ impl<'a> GlyphStore {
         GlyphStore {
             entry_buffer: vec![GlyphEntry::initial(); length],
             detail_store: DetailedGlyphStore::new(),
+            has_detailed_glyphs: false,
             is_whitespace: is_whitespace,
             is_rtl: is_rtl,
         }
@@ -571,6 +578,7 @@ impl<'a> GlyphStore {
             (false, true) => GlyphEntry::simple(data.id, data.advance),
             (false, false) => {
                 let glyph = &[DetailedGlyph::new(data.id, data.advance, data.offset)];
+                self.has_detailed_glyphs = true;
                 self.detail_store.add_detailed_glyphs_for_entry(i, glyph);
                 GlyphEntry::complex(data.cluster_start, data.ligature_start, 1)
             }
@@ -601,7 +609,7 @@ impl<'a> GlyphStore {
                                        data_for_glyphs[i].advance,
                                        data_for_glyphs[i].offset)
                 }).collect();
-
+                self.has_detailed_glyphs = true;
                 self.detail_store.add_detailed_glyphs_for_entry(i, &glyphs_vec);
                 GlyphEntry::complex(first_glyph_data.cluster_start,
                                     first_glyph_data.ligature_start,
@@ -643,10 +651,66 @@ impl<'a> GlyphStore {
 
     #[inline]
     pub fn advance_for_char_range(&self, rang: &Range<CharIndex>) -> Au {
-        self.iter_glyphs_for_char_range(rang)
-            .fold(Au(0), |advance, (_, glyph)| advance + glyph.advance())
+        //println!("advance_for_char_range - has_detailed_glyphs: {}", self.has_detailed_glyphs);
+        if !self.has_detailed_glyphs {
+            self.advance_for_char_range_simple_glyphs(rang)
+        } else {
+            self.iter_glyphs_for_char_range(rang)
+                .fold(Au(0), |advance, (_, glyph)| advance + glyph.advance())
+        }
     }
 
+    #[inline]
+    fn advance_for_char_range_simple_glyphs(&self, rang: &Range<CharIndex>) -> Au {
+        //println!("advance_for_char_range_simple_glyphs");
+        let begin = rang.begin().to_usize();
+        let len = rang.length().to_usize();
+        let num: usize = len / 4;
+        let leftover = len - num * 4;
+        let mut advance: u32x4 = u32x4::splat(0);
+        let mask = u32x4::splat(GLYPH_ADVANCE_MASK);
+
+        let entry_buf_slice: &[GlyphEntry] = self.entry_buffer.as_slice();
+        let buf: &[u32] = unsafe { mem::transmute(entry_buf_slice) };
+        //println!("begin, len, num, leftover: ({:?}, {:?}, {:?}, {:?})",
+                 //begin, len, num, leftover);
+        for i in 0..num {
+            let mut v = u32x4::load(buf, begin + i * 4);
+            v = v.bitand(mask);
+            v = v.shr(GLYPH_ADVANCE_SHIFT);
+            advance = advance + v;
+        }
+
+        let left = match leftover {
+            0 => 0, 
+            1 =>
+                ((self.entry_buffer[begin + len - 1].value &
+                 GLYPH_ADVANCE_MASK)) >> GLYPH_ADVANCE_SHIFT,
+            
+            2 =>
+                (((self.entry_buffer[begin + len - 1].value &
+                 GLYPH_ADVANCE_MASK)) >> GLYPH_ADVANCE_SHIFT) +
+                (((self.entry_buffer[begin + len - 2].value &
+                 GLYPH_ADVANCE_MASK)) >> GLYPH_ADVANCE_SHIFT),
+            
+            3 => (((self.entry_buffer[begin + len - 1].value &
+                  GLYPH_ADVANCE_MASK)) >> GLYPH_ADVANCE_SHIFT) +
+                (((self.entry_buffer[begin + len - 2].value &
+                 GLYPH_ADVANCE_MASK)) >> GLYPH_ADVANCE_SHIFT) +
+                (((self.entry_buffer[begin + len - 3].value &
+                 GLYPH_ADVANCE_MASK)) >> GLYPH_ADVANCE_SHIFT),
+            _ => panic!("Error leftover should never be > 3"),
+        };
+
+        let adv =
+            advance.extract(0) +
+            advance.extract(1) +
+            advance.extract(2) +
+            advance.extract(3);
+        
+        Au((adv + left) as i32)
+    }
+    
     // getter methods
     pub fn char_is_space(&self, i: CharIndex) -> bool {
         assert!(i < self.char_len());
