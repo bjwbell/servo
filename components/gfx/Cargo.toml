@@ -23,10 +23,9 @@ serde_macros = "0.5"
 smallvec = "0.1"
 string_cache = "0.1"
 time = "0.1.12"
-simd = "*"
 
-#[dependencies.simd]
-#git = "https://github.com/huonw/simd"
+[dependencies.simd]
+git = "https://github.com/huonw/simd"
 
 [dependencies.plugins]
 path = "../plugins"

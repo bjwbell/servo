@@ -516,7 +516,7 @@ pub struct GlyphStore {
     detail_store: DetailedGlyphStore,
 
     has_detailed_glyphs: bool,
-    
+
     is_whitespace: bool,
     is_rtl: bool,
 }
@@ -651,7 +651,6 @@ impl<'a> GlyphStore {
 
     #[inline]
     pub fn advance_for_char_range(&self, rang: &Range<CharIndex>) -> Au {
-        //println!("advance_for_char_range - has_detailed_glyphs: {}", self.has_detailed_glyphs);
         if !self.has_detailed_glyphs {
             self.advance_for_char_range_simple_glyphs(rang)
         } else {
@@ -662,7 +661,6 @@ impl<'a> GlyphStore {
 
     #[inline]
     fn advance_for_char_range_simple_glyphs(&self, rang: &Range<CharIndex>) -> Au {
-        //println!("advance_for_char_range_simple_glyphs");
         let begin = rang.begin().to_usize();
         let len = rang.length().to_usize();
         let num: usize = len / 4;
@@ -672,27 +670,25 @@ impl<'a> GlyphStore {
 
         let entry_buf_slice: &[GlyphEntry] = self.entry_buffer.as_slice();
         let buf: &[u32] = unsafe { mem::transmute(entry_buf_slice) };
-        //println!("begin, len, num, leftover: ({:?}, {:?}, {:?}, {:?})",
-                 //begin, len, num, leftover);
         for i in 0..num {
             let mut v = u32x4::load(buf, begin + i * 4);
-            v = v.bitand(mask);
-            v = v.shr(GLYPH_ADVANCE_SHIFT);
+            v = v & mask;
+            v = v >> GLYPH_ADVANCE_SHIFT;
             advance = advance + v;
         }
 
         let left = match leftover {
-            0 => 0, 
+            0 => 0,
             1 =>
                 ((self.entry_buffer[begin + len - 1].value &
                  GLYPH_ADVANCE_MASK)) >> GLYPH_ADVANCE_SHIFT,
-            
+
             2 =>
                 (((self.entry_buffer[begin + len - 1].value &
                  GLYPH_ADVANCE_MASK)) >> GLYPH_ADVANCE_SHIFT) +
                 (((self.entry_buffer[begin + len - 2].value &
                  GLYPH_ADVANCE_MASK)) >> GLYPH_ADVANCE_SHIFT),
-            
+
             3 => (((self.entry_buffer[begin + len - 1].value &
                   GLYPH_ADVANCE_MASK)) >> GLYPH_ADVANCE_SHIFT) +
                 (((self.entry_buffer[begin + len - 2].value &
@@ -707,10 +703,10 @@ impl<'a> GlyphStore {
             advance.extract(1) +
             advance.extract(2) +
             advance.extract(3);
-        
+
         Au((adv + left) as i32)
     }
-    
+
     // getter methods
     pub fn char_is_space(&self, i: CharIndex) -> bool {
         assert!(i < self.char_len());

@@ -558,7 +558,7 @@ dependencies = [
  "script_traits 0.0.1",
  "serde 0.5.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_macros 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "simd 0.0.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "simd 0.1.0 (git+https://github.com/huonw/simd)",
  "skia 0.0.20130412 (git+https://github.com/servo/skia)",
  "smallvec 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "string_cache 0.1.11 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -948,14 +948,6 @@ version = "2.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "pnacl-build-helper 1.4.10 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
-name = "llvmint"
-version = "0.0.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-dependencies = [
- "simdty 0.0.3 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -1504,22 +1496,8 @@ dependencies = [
 
 [[package]]
 name = "simd"
-version = "0.0.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-dependencies = [
- "llvmint 0.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "simdty 0.0.3 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
-name = "simd"
 version = "0.1.0"
 source = "git+https://github.com/huonw/simd#16aad570289b9a8f49c367f0943d57f4db40fdd7"
-
-[[package]]
-name = "simdty"
-version = "0.0.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "skia"
