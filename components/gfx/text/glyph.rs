@@ -1,9 +1,9 @@
-
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 use euclid::point::Point2D;
+use simd::u32x4;
 use std::cmp::{Ordering, PartialOrd};
 use std::mem;
 use std::ops::{BitAnd, Shr};
@@ -12,7 +12,7 @@ use std::vec::Vec;
 use util::geometry::Au;
 use util::range::{self, Range, RangeIndex, EachIndex};
 use util::vec::*;
-use simd::u32x4;
+
 
 
 /// GlyphEntry is a port of Gecko's CompressedGlyph scheme for storing glyph data compactly.
